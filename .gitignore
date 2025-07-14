@@ -1,0 +1,63 @@
+# General project-wide ignores
+# OS files
+.DS_Store
+Thumbs.db
+
+
+# IDE/editor files
+.vscode/
+.idea/
+.cursor/
+*.code-workspace
+*.sublime-projectI
+*.sublime-workspace
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Top-level logs and misc
+logs/
+*.log
+*.bak
+*.tmp
+.python-version
+
+# Docker overrides
+docker-compose.override.yml
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+aichatbot.db
+
+# Upload directories
+uploads/
+/tmp/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Loại trừ folder backend_RAG
+backend_RAG/
+
+# Loại trừ các file markdown cần phát triển/sửa
+ai-math-chatbot-main/docs/AI_ Math_Chatbot_Development_Roadmap.md
+ai-math-chatbot-main/RAG_IMPLEMENTATION_TODO.md
+ai-math-chatbot-main/AUTHENTICATION_TODO.md

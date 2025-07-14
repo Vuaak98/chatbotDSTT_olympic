@@ -1,0 +1,47 @@
+version: '3.10'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount the backend code for development hot-reloading
+      - ./backend:/app
+    env_file:
+      - ./backend/.env # Load environment variables from .env file
+    environment:
+      # Ensure Python output is sent straight to output streams without buffering
+      PYTHONUNBUFFERED: 1
+      # API settings
+      ALLOWED_ORIGINS: http://localhost:3000,http://frontend:3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://backend:8000
+    volumes:
+      # Mount for development hot-reloading
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend_db_data:
+    # Define a named volume for the SQLite database file (if using SQLite)
+    # This ensures the database persists across container restarts

@@ -1,0 +1,329 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 142.1 76.2% 36.3%;
+    --primary-foreground: 355.7 100% 97.3%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 142.1 76.2% 36.3%;
+    --radius: 0.5rem;
+    --code-bg: 240 4.8% 95.9%; /* Light mode code block background */
+  }
+
+  .dark {
+    --background: 0 0% 11%; /* Dark grey chat background, similar to ChatGPT */
+    --foreground: 0 0% 95%;
+    --card: 24 9.8% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 142.1 70.6% 45.3%;
+    --primary-foreground: 144.9 80.4% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%; /* Light dark grey (for user messages) */
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 0 0% 16%; /* Light dark grey for input bar */
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 85.7% 97.3%;
+    --border: 240 3.7% 15.9%;
+    --input: 0 0% 16%; /* Light dark grey input background */
+    --ring: 142.4 71.8% 29.2%;
+    --code-bg: 240 3.7% 15.9%; /* Dark mode code block background */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* KaTeX styling */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Code block styling */
+pre, code, pre code {
+  background-color: hsl(var(--code-bg)) !important;
+  color: inherit;
+}
+
+pre {
+  @apply my-4 overflow-x-auto rounded-lg p-4;
+}
+
+code {
+  @apply rounded px-1 py-0.5 font-mono text-sm;
+}
+
+pre code {
+  @apply bg-transparent p-0;
+}
+
+/* Prose styling for markdown content */
+.prose {
+  @apply max-w-none;
+}
+
+.prose p {
+  @apply my-2;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  @apply font-bold my-4;
+}
+
+.prose h1 {
+  @apply text-2xl;
+}
+
+.prose h2 {
+  @apply text-xl;
+}
+
+.prose h3 {
+  @apply text-lg;
+}
+
+.prose ul,
+.prose ol {
+  @apply my-4 pl-6;
+}
+
+.prose ul {
+  @apply list-disc;
+}
+
+.prose ol {
+  @apply list-decimal;
+}
+
+.prose li {
+  @apply my-1;
+}
+
+.prose a {
+  @apply text-primary underline;
+}
+
+.prose blockquote {
+  @apply border-l-4 border-muted pl-4 italic;
+}
+
+.prose hr {
+  @apply my-6 border-t border-muted;
+}
+
+.prose table {
+  @apply w-full border-collapse my-4;
+}
+
+.prose th,
+.prose td {
+  @apply border border-muted p-2;
+}
+
+.prose th {
+  @apply bg-muted font-bold;
+}
+
+.prose ul li::marker,
+.prose ol li::marker {
+  color: inherit;
+  opacity: 1;
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+/* Math equation styling */
+.katex {
+  font-size: 1.1em !important;
+}
+
+.katex-display > .katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.5rem 0;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Hide scrollbar but allow scrolling */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+@supports (scrollbar-width: none) {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Custom scrollbar for chat input textarea */
+.chat-textarea-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-textarea-wrapper::-webkit-scrollbar-track {
+  background: transparent; /* Make track transparent */
+  margin-top: 8px;    /* Inset from top */
+  margin-bottom: 8px; /* Inset from bottom */
+}
+
+.chat-textarea-wrapper::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+  border: 1px solid transparent; /* Creates padding around thumb */
+}
+
+.chat-textarea-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Firefox specific scrollbar styling (optional, as ::-webkit- is more common) */
+.chat-textarea-wrapper {
+  -ms-overflow-style: none;
+  overflow-y: auto;
+}
+
+.shadow-input-bar {
+  box-shadow: 0 4px 24px 0 rgba(0,0,0,0.10), 0 1.5px 6px 0 rgba(0,0,0,0.08);
+}
+
+/* Custom scrollbar for sidebar chat list */
+.sidebar-chat-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+  border: 1px solid transparent;
+}
+
+.sidebar-chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Cross-browser compatible scrollbar styling */
+.sidebar-chat-scrollbar {
+  -ms-overflow-style: none; /* Internet Explorer and Edge */
+  overflow-y: auto; 
+}
+
+@supports (scrollbar-width: thin) {
+  .sidebar-chat-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+}
+
+/* Chat-textarea-wrapper cross-browser support */
+.chat-textarea-wrapper {
+  -ms-overflow-style: none;
+  overflow-y: auto;
+}
+
+@supports (scrollbar-width: thin) {
+  .chat-textarea-wrapper {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+}
+
+/* Custom styles for chat input elements */
+.custom-textarea {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Class for chat container max height */
+.chat-container-height {
+  max-height: calc(100vh - 76px);
+}
+
+/* Class for sidebar chat scrollable area */
+.sidebar-chat-scrollable {
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+/* Hidden file input class */
+.hidden-file-input {
+  display: none;
+}
