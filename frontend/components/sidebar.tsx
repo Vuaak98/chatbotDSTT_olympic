@@ -20,6 +20,8 @@ import { Input } from "@/components/ui/input"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
+import { useAuth } from "@/lib/auth-context";
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Custom NewChatIcon component
 const NewChatIcon = () => (
@@ -114,6 +116,7 @@ export default function Sidebar() {
     isSidebarOpen,
     toggleSidebar,
     loadChats,
+    isChatLoading,
   } = useStore()
   const [chatToDelete, setChatToDelete] = useState<string | null>(null)
   const [isRenaming, setIsRenaming] = useState<string | null>(null)
@@ -122,51 +125,33 @@ export default function Sidebar() {
   const [isSearchActive, setIsSearchActive] = useState(false)
   const isDesktop = useMediaQuery("(min-width: 768px)")
   const { toast } = useToast()
+  const { user, isLoading: isAuthLoading } = useAuth();
 
-  // Load chat sessions when the sidebar is mounted
+  // Load chat sessions khi xác thực xong và có user
   useEffect(() => {
-    let mounted = true;
-    
-    const initializeChats = async () => {
-      try {
-        await loadChats();
-        
-        // Only create a new chat if specifically requested,
-        // not automatically on mount or reload
-        // The loadChats function in the store handles setting 
-        // the active chat from local storage or the most recent chat
-      } catch (error) {
-        console.error("Failed to load chats:", error);
-        
-        // Only attempt to create a new chat if loading failed AND we're still mounted
-        if (mounted) {
-          try {
-            await createNewChat();
-            toast({
-              title: "Created New Chat",
-              description: "Couldn't load existing chats, so we've created a new one for you.",
-              variant: "default",
-            });
-          } catch (createError) {
-            console.error("Failed to create fallback chat:", createError);
-            toast({
-              title: "Error",
-              description: "Failed to load or create chats. Please refresh the page.",
-              variant: "destructive",
-            });
-          }
-        }
+    if (isAuthLoading) return;
+    if (user) {
+      loadChats();
+    }
+  }, [isAuthLoading, user, loadChats]);
+
+  // Listen for app-reset event to reload chats
+  useEffect(() => {
+    const handleReset = () => {
+      if (user) {
+        loadChats();
+      } else {
+        // Clear chats if logged out
+        // You may want to call a clearChats() action if available
+        // For now, just reload (which should clear if no user)
+        loadChats();
       }
     };
-    
-    initializeChats();
-    
-    // Cleanup function to prevent state updates after unmount
+    window.addEventListener("app-reset", handleReset);
     return () => {
-      mounted = false;
+      window.removeEventListener("app-reset", handleReset);
     };
-    
-  }, [loadChats, createNewChat, toast]);
+  }, [user, loadChats]);
 
   const handleNewChat = async () => {
     try {
@@ -294,6 +279,20 @@ export default function Sidebar() {
       );
     }
   }, [chats, searchQuery]);
+
+  // Skeleton loader khi đang xác thực hoặc loading chat
+  if (isAuthLoading || isChatLoading) {
+    return (
+      <aside className="sidebar w-64 bg-background border-r flex flex-col">
+        <div className="p-4">
+          <Skeleton className="h-10 w-3/4 mb-4" />
+          {[...Array(6)].map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full mb-2" />
+          ))}
+        </div>
+      </aside>
+    );
+  }
 
   // CONDITIONAL RENDERING FOR CLOSED SIDEBAR STATE
   if (!isSidebarOpen) {

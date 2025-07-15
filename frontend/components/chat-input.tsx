@@ -12,6 +12,16 @@ import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { uploadFile, streamChatMessage } from "@/lib/api-service"
 import { produce } from "immer"
+import { useAuth } from "@/lib/auth-context";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { useRouter } from "next/navigation";
 
 const PLACEHOLDER_TEXTS = [
   "Ask anything",
@@ -48,6 +58,9 @@ export default function ChatInput() {
     clearStagedFiles
   } = useStore()
   const isCentered = messages.length === 0
+  const { user } = useAuth();
+  const router = useRouter();
+  const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);
 
   // Cycle through placeholder texts only when there are no messages
   useEffect(() => {
@@ -171,6 +184,11 @@ export default function ChatInput() {
   const handleSubmit = async () => {
     if (isGenerating || isAnimating) return
     if (!input.trim() && stagedFiles.length === 0) return
+    // Kiểm tra đăng nhập
+    if (!user) {
+      setIsLoginPromptOpen(true);
+      return;
+    }
 
     setIsAnimating(true)
     const currentInput = input.trim()
@@ -385,6 +403,26 @@ export default function ChatInput() {
     }
   }
 
+  // Hộp thoại yêu cầu đăng nhập
+  function LoginPromptDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Yêu cầu đăng nhập</DialogTitle>
+            <DialogDescription>
+              Bạn cần đăng nhập để sử dụng chức năng chat. Vui lòng đăng nhập hoặc đăng ký tài khoản mới.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => router.push("/login")}>Đăng nhập</Button>
+            <Button variant="outline" onClick={() => router.push("/register")}>Đăng ký</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   return (
     <div className={cn("relative mx-auto w-full max-w-3xl", isCentered ? "mt-4" : "")}>
       <div className="relative flex flex-col rounded-3xl border border-neutral-300 dark:border-neutral-700 shadow-input-bar bg-background dark:bg-accent">
@@ -514,6 +552,8 @@ export default function ChatInput() {
         tabIndex={-1}
         aria-hidden="true"
       />
+      {/* Hộp thoại yêu cầu đăng nhập */}
+      <LoginPromptDialog open={isLoginPromptOpen} onOpenChange={setIsLoginPromptOpen} />
     </div>
   )
 }

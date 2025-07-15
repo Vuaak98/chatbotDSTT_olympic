@@ -14,15 +14,15 @@ def get_chat(db: Session, chat_id: int) -> Optional[models.Chat]:
     """Lấy một cuộc trò chuyện duy nhất bằng ID của nó."""
     return db.query(models.Chat).filter(models.Chat.id == chat_id).first()
 
-def get_chats(db: Session, skip: int = 0, limit: int = 100) -> List[models.Chat]:
-    """Lấy danh sách các cuộc trò chuyện, được sắp xếp theo thời gian gần nhất."""
-    return db.query(models.Chat).order_by(models.Chat.create_time.desc()).offset(skip).limit(limit).all()
+def get_chats(db: Session, user_id: int, skip: int = 0, limit: int = 100) -> List[models.Chat]:
+    """Lấy danh sách các cuộc trò chuyện của một user, được sắp xếp theo thời gian gần nhất."""
+    return db.query(models.Chat).filter(models.Chat.user_id == user_id).order_by(models.Chat.create_time.desc()).offset(skip).limit(limit).all()
 
-def create_chat(db: Session, chat: schemas.ChatCreate) -> models.Chat:
+def create_chat(db: Session, chat: schemas.ChatCreate, user_id: int) -> models.Chat:
     """Tạo một cuộc trò chuyện mới."""
     try:
-        # Create chat with provided title or default
-        db_chat = models.Chat(title=chat.title)
+        # Create chat with provided title or default, gắn user_id
+        db_chat = models.Chat(title=chat.title, user_id=user_id)
         db.add(db_chat)
         db.commit()
         db.refresh(db_chat)
@@ -41,20 +41,24 @@ def create_chat(db: Session, chat: schemas.ChatCreate) -> models.Chat:
         logger.error(f"Error creating chat: {str(e)}")
         raise
 
-def update_chat(db: Session, chat_id: int, chat_update: schemas.ChatUpdate) -> Optional[models.Chat]:
-    """Update a chat's title."""
+def update_chat(db: Session, chat_id: int, chat_update: schemas.ChatUpdate, user_id: int = None) -> Optional[models.Chat]:
+    """Update a chat's title, chỉ cho phép nếu đúng user_id."""
     db_chat = get_chat(db, chat_id)
     if db_chat:
+        if user_id is not None and db_chat.user_id != user_id:
+            return None
         if chat_update.title is not None:
             db_chat.title = chat_update.title
             db.commit()
             db.refresh(db_chat)
     return db_chat
 
-def delete_chat(db: Session, chat_id: int) -> Optional[models.Chat]:
-    """Delete a chat by its ID."""
+def delete_chat(db: Session, chat_id: int, user_id: int = None) -> Optional[models.Chat]:
+    """Delete a chat by its ID, chỉ cho phép nếu đúng user_id."""
     db_chat = get_chat(db, chat_id)
     if db_chat:
+        if user_id is not None and db_chat.user_id != user_id:
+            return None
         # File cleanup logic needs to be re-evaluated based on FileMetadata
         # For now, focus on chat and message deletion. Physical file cleanup is a separate concern
         # (handled by background tasks in file_router or a dedicated service)

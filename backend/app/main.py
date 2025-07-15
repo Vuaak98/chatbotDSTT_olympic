@@ -23,6 +23,8 @@ from .middleware import (
     gemini_api_exception_handler
 )
 
+from app.routers import auth_router
+
 # Set up logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -92,6 +94,7 @@ app.include_router(chat_router.router)
 app.include_router(message_router.router)
 app.include_router(file_router.router)
 app.include_router(streaming_router.router)
+app.include_router(auth_router.router)
 
 # Start background tasks when the application starts
 @app.on_event("startup")

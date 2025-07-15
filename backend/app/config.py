@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # Server Settings
     allowed_origins: str = os.getenv("ALLOWED_ORIGINS", "*")
 
+    # === AUTHENTICATION SETTINGS ===
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me")
+    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = parse_int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 60)
+
     # In Pydantic v2, Config is replaced with model_config
     model_config = {
         "env_file": ".env",
@@ -41,3 +46,8 @@ def get_settings():
 
 # Get API Keys from environment variables for backward compatibility
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# === AUTHENTICATION GLOBALS ===
+SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = parse_int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 60)

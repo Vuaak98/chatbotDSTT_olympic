@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import List, Optional, Union
 
@@ -96,3 +96,30 @@ class InterruptRequest(BaseModel):
 class InterruptResponse(BaseModel):
     status: str
     message: str
+
+# === AUTHENTICATION SCHEMAS ===
+from pydantic import EmailStr
+
+class UserRegister(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+class UserResponse(BaseModel):
+    id: int
+    email: EmailStr
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

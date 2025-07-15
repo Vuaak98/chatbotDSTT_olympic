@@ -19,6 +19,8 @@ interface StoreState {
   stagedFiles: StagedFile[]
   generationAbortController?: AbortController | null
   isAnimating: boolean   // Track if typewriter animation is ongoing
+  isChatLoading: boolean // Thêm biến loading cho sidebar
+  isMessageLoading: boolean // Thêm biến loading cho khung chat
 
   // Actions
   addMessage: (message: Message) => void
@@ -39,6 +41,7 @@ interface StoreState {
   updateChatNameOptimistically: (chatId: string, newName: string) => void
   regenerateMessage: (chatId: string, messageId: string) => Promise<void>
   editMessage: (chatId: string, messageId: string, newContent: string) => Promise<void>
+  clearAllChats: () => void
 }
 
 // Message update queue to batch updates
@@ -58,6 +61,8 @@ export const useStore = create<StoreState>()(
       stagedFiles: [],
       generationAbortController: null,
       isAnimating: false,
+      isChatLoading: false,
+      isMessageLoading: false,
 
       addMessage: (message: Message) => {
         set(produce((draft: StoreState) => {
@@ -144,17 +149,19 @@ export const useStore = create<StoreState>()(
         set({ stagedFiles: [] }); // Clear staged files when changing chat
         if (chatId) {
           try {
+            set({ isMessageLoading: true });
             const chat = await api.getChat(chatId);
             set(produce((draft: StoreState) => {
               draft.activeChat = chatId;
               draft.messages = chat?.messages || [];
             }));
+            set({ isMessageLoading: false });
           } catch (error) {
             console.error("Failed to fetch messages for chat:", chatId, error);
-            set({ activeChat: chatId, messages: [] }); // Set active chat but with empty messages on error
+            set({ activeChat: chatId, messages: [], isMessageLoading: false }); // Set active chat but with empty messages on error
           }
         } else {
-          set({ activeChat: null, messages: [] }); // Clearing active chat
+          set({ activeChat: null, messages: [], isMessageLoading: false }); // Clearing active chat
         }
       },
 
@@ -224,6 +231,7 @@ export const useStore = create<StoreState>()(
 
       loadChats: async () => {
         try {
+          set({ isChatLoading: true });
           const chatsFromApi = await api.getChats();
           set(produce((draft: StoreState) => {
             draft.chats = chatsFromApi.map(c => ({
@@ -246,10 +254,10 @@ export const useStore = create<StoreState>()(
           if (currentActiveChat) {
             await get().setActiveChat(currentActiveChat); // This will load messages
           }
-
+          set({ isChatLoading: false });
         } catch (error) {
           console.error("Failed to load chats:", error);
-          set({ chats: [] }); // Clear chats on error
+          set({ chats: [], isChatLoading: false }); // Clear chats on error
         }
       },
       
@@ -278,6 +286,15 @@ export const useStore = create<StoreState>()(
             message.content = newContent;
             // Potentially remove subsequent assistant messages and trigger a new response generation
           }
+        }));
+      },
+
+      clearAllChats: () => {
+        set(produce((draft: StoreState) => {
+          draft.chats = [];
+          draft.messages = [];
+          draft.activeChat = null;
+          draft.stagedFiles = [];
         }));
       },
 

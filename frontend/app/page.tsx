@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { ModeToggle } from "@/components/mode-toggle"
+import { UserNav } from "@/components/user-nav"
 import { cn } from "@/lib/utils"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useToast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Custom SidebarIcon component
 const SidebarIcon = () => (
@@ -70,7 +72,7 @@ const SidebarIcon = () => (
 )
 
 export default function Home() {
-  const { messages, activeChat, clearChat, isSidebarOpen, toggleSidebar, isGenerating, loadChats, createNewChat } = useStore()
+  const { messages, activeChat, clearChat, isSidebarOpen, toggleSidebar, isGenerating, loadChats, createNewChat, isMessageLoading } = useStore()
   const [isLoading, setIsLoading] = useState(true)
   const [showClearDialog, setShowClearDialog] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -228,6 +230,18 @@ export default function Home() {
     }
   }, [messages.length]);
 
+  // Hiển thị toast chào mừng khi đăng nhập thành công
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("showWelcomeToast")) {
+      toast({
+        title: "Chào mừng!",
+        description: "Bạn đã đăng nhập thành công.",
+        variant: "success",
+      });
+      sessionStorage.removeItem("showWelcomeToast");
+    }
+  }, [toast]);
+
   return (
     <main className="flex h-screen overflow-hidden bg-gradient-to-b from-background to-background/95 dark:from-background dark:to-background">
       {/* Sidebar */}
@@ -289,8 +303,9 @@ export default function Home() {
               <h1 className="text-xl font-bold tracking-tight">AI Math Chatbot</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded-full px-2 bg-background/90 dark:bg-background/90">
+          <div className="flex items-center space-x-4">
             <ModeToggle />
+            <UserNav />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -323,54 +338,61 @@ export default function Home() {
           ref={chatContainerRef}
           onScroll={handleScroll}
         >
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-start">
-              {/* Grouped main content: logo, text, input bar - above center */}
-              <div className="flex flex-col items-center w-full max-w-3xl pt-14">
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <BookOpen className="h-10 w-10" />
+          {/* Skeleton loading for chat messages */}
+          {isMessageLoading ? (
+            <div className="space-y-6 mt-8">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="flex justify-start">
+                  <Skeleton className="h-20 w-3/4 mb-2" />
                 </div>
-                <h2 className="mb-2 text-center text-3xl font-bold tracking-tight">Ask me anything about math!</h2>
-                <p className="mb-6 max-w-md text-center text-muted-foreground">
-                  I can help with equations, theorems, calculus, algebra, and more. Try asking a question below.
-                </p>
-                <div className="w-full">
-                  <ChatInput />
-                </div>
-              </div>
-              
-              {/* Example cards moved to the bottom */}
-              <div className="absolute bottom-10 left-0 right-0 px-4">
-                <div className="mx-auto max-w-5xl grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-                  <ExampleCard
-                    title="Solve Equations"
-                    description="Solve quadratic, cubic, or systems of equations step-by-step"
-                    example="Solve x^2 - 5x + 6 = 0"
-                  />
-                  <ExampleCard
-                    title="Calculate Derivatives"
-                    description="Find derivatives of functions with detailed explanations"
-                    example="What is the derivative of sin(x^2)?"
-                  />
-                  <ExampleCard
-                    title="Explain Concepts"
-                    description="Get clear explanations of mathematical concepts"
-                    example="Explain the Pythagorean theorem"
-                  />
-                </div>
-              </div>
+              ))}
             </div>
           ) : (
-            <div className="mx-auto max-w-3xl">
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
+            messages.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-start">
+                {/* Grouped main content: logo, text, input bar - above center */}
+                <div className="flex flex-col items-center w-full max-w-3xl pt-14">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <BookOpen className="h-10 w-10" />
+                  </div>
+                  <h2 className="mb-2 text-center text-3xl font-bold tracking-tight">Ask me anything about math!</h2>
+                  <p className="mb-6 max-w-md text-center text-muted-foreground">
+                    I can help with equations, theorems, calculus, algebra, and more. Try asking a question below.
+                  </p>
+                  <div className="w-full">
+                    <ChatInput />
+                  </div>
+                </div>
+                
+                {/* Example cards moved to the bottom */}
+                <div className="absolute bottom-10 left-0 right-0 px-4">
+                  <div className="mx-auto max-w-5xl grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                    <ExampleCard
+                      title="Solve Equations"
+                      description="Solve quadratic, cubic, or systems of equations step-by-step"
+                      example="Solve x^2 - 5x + 6 = 0"
+                    />
+                    <ExampleCard
+                      title="Calculate Derivatives"
+                      description="Find derivatives of functions with detailed explanations"
+                      example="What is the derivative of sin(x^2)?"
+                    />
+                    <ExampleCard
+                      title="Explain Concepts"
+                      description="Get clear explanations of mathematical concepts"
+                      example="Explain the Pythagorean theorem"
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mx-auto max-w-3xl">
+                {messages.map((message) => (
+                  <ChatMessage key={message.id} message={message} />
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+            )
           )}
         </div>
 

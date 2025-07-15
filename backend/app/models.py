@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, CheckConstraint, Table
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, CheckConstraint, Table, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime, timedelta, timezone
 from .database import Base
@@ -18,6 +18,8 @@ class Chat(Base):
     id = Column(Integer, primary_key=True, index=True, nullable=False, autoincrement="auto")
     title = Column(String, index=True, default="New Chat") # Default title
     create_time = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user = relationship("User", back_populates="chats")
 
     messages = relationship("Message", back_populates="chat", cascade="all, delete-orphan")
 
@@ -70,3 +72,12 @@ class Message(Base):
         secondary=message_file_link_table,
         back_populates="messages"
     )
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+    chats = relationship("Chat", back_populates="user")
