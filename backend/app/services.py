@@ -13,6 +13,7 @@ from pathlib import Path
 from datetime import datetime
 from sqlalchemy.orm import Session
 import json
+from fastapi import UploadFile
 
 from . import config, schemas, crud
 from .crud import file_crud
@@ -137,19 +138,95 @@ async def _prepare_single_file_for_gemini(fm: FileMetadata, db: Session) -> Opti
         logger.error(f"Error preparing file {fm.id}: {e}", exc_info=True)
         return None
 
-# === SỬA generate_ai_response_stream: gọi _prepare_single_file_for_gemini(fm, db) ===
+# === Hàm chuẩn hóa metadata file upload cho message_router ===
+async def prepare_file_metadata_for_db(upload_file: UploadFile, db: Session):
+    """
+    Kiểm tra, lưu file upload vào disk, tạo metadata và lưu vào DB.
+    Trả về đối tượng FileMetadata.
+    """
+    import uuid, os, mimetypes
+    from pathlib import Path
+    from .config import get_settings
+    from .utils import sanitize_filename, validate_mime_type
+    from .crud import file_crud
+
+    ALLOWED_MIME_TYPES = [
+        'text/plain',
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif',
+    ]
+    EXTENSION_TO_MIME = {
+        '.heic': 'image/heic', '.heif': 'image/heif', '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }
+    MAX_INLINE_SIZE = get_settings().max_file_size
+    MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024
+    UPLOAD_DIR = Path(get_settings().upload_dir)
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    original_filename = sanitize_filename(upload_file.filename or "")
+    if not original_filename:
+        raise Exception("Invalid filename")
+    file_extension_original = os.path.splitext(original_filename)[1].lower()
+    content_type = upload_file.content_type
+    if file_extension_original in EXTENSION_TO_MIME:
+        content_type = EXTENSION_TO_MIME[file_extension_original]
+    if not content_type or not validate_mime_type(content_type, ALLOWED_MIME_TYPES):
+        raise Exception(f"File type {content_type or 'unknown'} not supported.")
+    file_id = str(uuid.uuid4())
+    file_storage_extension = mimetypes.guess_extension(content_type) or file_extension_original or ''
+    local_disk_path = UPLOAD_DIR / f"{file_id}{file_storage_extension}"
+    file_size = 0
+    try:
+        with open(local_disk_path, "wb") as buffer:
+            while chunk := await upload_file.read(1024 * 1024):
+                file_size += len(chunk)
+                if file_size > MAX_FILE_SIZE:
+                    buffer.close()
+                    os.unlink(local_disk_path)
+                    raise Exception(f"File size exceeds {MAX_FILE_SIZE // (1024*1024)}MB")
+                buffer.write(chunk)
+    except Exception as e:
+        if os.path.exists(local_disk_path):
+            os.unlink(local_disk_path)
+        raise Exception(f"Could not save file: {str(e)}")
+    if content_type == 'text/plain':
+        try:
+            with open(local_disk_path, 'r', encoding='utf-8', errors='replace') as f: f.read(1024)
+        except Exception as e:
+            os.unlink(local_disk_path); raise Exception(f"Invalid text file: {str(e)}")
+    elif content_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        try:
+            text_c = extract_text_from_docx(str(local_disk_path))
+            if not text_c or text_c.startswith('[Error'):
+                os.unlink(local_disk_path); raise Exception("Invalid/corrupt DOCX")
+        except Exception as e:
+            os.unlink(local_disk_path); raise Exception(f"Error processing DOCX: {str(e)}")
+    processing_method = "inline" if file_size <= MAX_INLINE_SIZE else "files_api"
+    db_file_metadata = file_crud.create_file_metadata(
+        db=db,
+        file_id=file_id,
+        original_filename=original_filename,
+        content_type=content_type,
+        size=file_size,
+        local_disk_path=str(local_disk_path),
+        processing_method=processing_method
+    )
+    return db_file_metadata
+
+# === STRATEGY PATTERN INTEGRATION ===
 async def generate_ai_response_stream(
     chat_id: str,
     user_message_content: str,
     file_ids: Optional[List[str]],
     db: Session,
-    queue: asyncio.Queue
+    queue: asyncio.Queue,
+    pipeline_type: str = "gemini"
 ):
-    if not client:
-        await queue.put(json.dumps({"error": "AI service not configured."}))
-        await queue.put("[DONE]")
-        return
-
+    """
+    Hàm điều phối chính cho AI response, sử dụng Strategy Pattern.
+    TODO: Nên chuyển logic lưu DB ra ngoài router/service layer nếu muốn clean hơn.
+    """
     try:
         # Bước 1: Lưu tin nhắn của người dùng
         crud.create_chat_message(
@@ -157,49 +234,30 @@ async def generate_ai_response_stream(
             content=user_message_content, file_ids=file_ids
         )
         logger.info(f"User message saved to DB for chat {chat_id}")
+        print(f"[DEBUG] User message: {user_message_content}")
 
-        # Bước 2: Chuẩn bị ngữ cảnh từ lịch sử chat
-        chat_history_models = crud.get_messages_for_chat(db, chat_id=int(chat_id))
-        gemini_prompt_contents = []
-        for msg_model in chat_history_models:
-            message_parts = [types.Part(text=msg_model.content)]
-            # Nếu message có file đính kèm, truyền nội dung file vào prompt
-            if hasattr(msg_model, 'files') and msg_model.files:
-                for fm in msg_model.files:
-                    file_parts = await _prepare_single_file_for_gemini(fm, db)
-                    if file_parts:
-                        message_parts.extend(file_parts)
-            gemini_prompt_contents.append(
-                types.Content(
-                    role="user" if msg_model.role == "user" else "model",
-                    parts=message_parts
-                )
-            )
-
-        # Bước 3: Gọi API của Gemini với đúng tham số
-        logger.info(f"Sending request to Gemini for chat_id {chat_id}")
-
-        response_stream = client.models.generate_content_stream(
-            model=config.get_settings().gemini_model_name,
-            contents=gemini_prompt_contents,
-            config=types.GenerateContentConfig(
-                system_instruction=MATH_CHATBOT_SYSTEM_INSTRUCTION,
-                temperature=0.7
-            )
+        # Bước 2: Lấy pipeline từ factory
+        from .strategy import get_pipeline
+        pipeline = get_pipeline(pipeline_type, config)
+        
+        # Bước 3: Lấy response từ pipeline
+        response = await pipeline.generate_response(
+            chat_id=chat_id,
+            user_message_content=user_message_content,
+            file_ids=file_ids,
+            db=db,
+            queue=queue
         )
 
-        # Bước 4: Xử lý luồng phản hồi
-        ai_response_content = ""
-        for chunk in response_stream:
-            if hasattr(chunk, 'text') and chunk.text:
-                ai_response_content += chunk.text
-                await queue.put(json.dumps({"text": chunk.text}))
-
-        if ai_response_content:
+        # Bước 4: Lưu response vào DB
+        if response.content and not response.error:
             crud.create_chat_message(
-                db=db, chat_id=int(chat_id), role="model", content=ai_response_content.strip()
+                db=db, chat_id=int(chat_id), role="model", content=response.content
             )
             logger.info(f"AI response saved for chat_id {chat_id}")
+            print(f"[DEBUG] AI response: {response.content}")
+        elif response.error:
+            logger.error(f"Pipeline error: {response.error}")
 
     except Exception as e:
         logger.error(f"Error in AI response stream for chat {chat_id}: {e}", exc_info=True)

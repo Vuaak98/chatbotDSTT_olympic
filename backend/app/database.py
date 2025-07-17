@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./aichatbot.db")
+print("DEBUG: DATABASE_URL =", DATABASE_URL)
 
 # SQLALCHEMY_DATABASE_URL = "postgresql://user:password@postgresserver/db"
 

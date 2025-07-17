@@ -54,19 +54,36 @@ async def create_new_message_for_chat(
     import asyncio
     import json
     queue = asyncio.Queue()
+
+    # --- Logic chọn pipeline ---
+    if message_text.strip().startswith("/rag"):
+        pipeline_type = "rag"
+        # Cắt '/rag' khỏi message_text khi gửi vào pipeline RAG
+        message_for_pipeline = message_text.strip()[4:].lstrip()
+    else:
+        pipeline_type = "gemini"
+        message_for_pipeline = message_text
+
     await services.generate_ai_response_stream(
         chat_id=str(chat_id),
-        user_message_content=user_db_message.content,
+        user_message_content=message_for_pipeline,
         file_ids=[f.id for f in user_db_message.files] if user_db_message.files else [],
         db=db,
-        queue=queue
+        queue=queue,
+        pipeline_type=pipeline_type
     )
     ai_response_content = ""
     while True:
         chunk = await queue.get()
         if chunk == "[DONE]":
             break
-        data = json.loads(chunk)
+        if not chunk or not chunk.strip():
+            continue  # Bỏ qua chunk rỗng hoặc chỉ chứa whitespace
+        try:
+            data = json.loads(chunk)
+        except json.JSONDecodeError:
+            print(f"Chunk không phải JSON hợp lệ: {repr(chunk)}")
+            continue
         if "text" in data:
             ai_response_content += data["text"]
 

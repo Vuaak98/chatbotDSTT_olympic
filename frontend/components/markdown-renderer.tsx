@@ -39,7 +39,13 @@ const markdownComponents = {
   li: ({ node, ...props }: any) => <li className="mb-1 text-foreground" {...props} />,
   
   // Paragraph
-  p: ({ node, ...props }: any) => <p className="mb-4 text-foreground" {...props} />,
+  p: ({ node, ...props }: any) => {
+    // Nếu <p> chỉ chứa 1 con là <pre>, render thẳng <pre> không bọc <p>
+    if (node && node.children && node.children.length === 1 && node.children[0].tagName === "pre") {
+      return <>{props.children}</>;
+    }
+    return <p className="mb-4 text-foreground" {...props} />;
+  },
   
   // Code blocks with syntax highlighting
   code: ({ inline, className, children, ...props }: CodeBlockProps) => {

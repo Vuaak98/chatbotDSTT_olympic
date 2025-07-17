@@ -1,17 +1,38 @@
+# Web Framework & Server
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
-google-genai==0.8.0
-python-docx==1.1.2
-pydantic==2.7.1
+
+# Pydantic & Configuration
+pydantic>=2.7.0,<3.0.0
 pydantic-settings==2.2.1
-httpx==0.27.0
 python-dotenv==1.0.1
-sqlalchemy==2.0.29
-python-multipart==0.0.9
-sqlalchemy-utils
-alembic==1.12.1
+
+# --- LangChain Family (Corrected Pinned Versions) ---
+langchain==0.2.5
+langchain-core==0.2.9
+langgraph==0.0.69  # <-- ĐÃ SỬA LẠI PHIÊN BẢN ĐÚNG
+langchain-openai==0.1.8
+langchain-qdrant==0.1.1
+langchain-community==0.2.5
+langchain-text-splitters==0.2.1
+
+# Vector Database
+qdrant-client>=1.9.0
+
+# AI Models & Tokenizer
+google-genai>=0.5.0
+openai>=1.3.0
+tiktoken>=0.7.0
+
+# Database & ORM
+sqlalchemy==2.0.30
+sqlalchemy-utils>=0.41.2
+alembic==1.13.1
 psycopg2-binary
+
+# Authentication
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
-python-multipart==0.0.9
-python-dotenv
+
+#
+pytz>=2023.3
