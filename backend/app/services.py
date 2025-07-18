@@ -19,6 +19,9 @@ from . import config, schemas, crud
 from .crud import file_crud
 from .models import FileMetadata
 
+from app.config import USE_RAG
+from .config import get_settings
+
 # --- Cấu hình Logging ---
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -221,26 +224,44 @@ async def generate_ai_response_stream(
     file_ids: Optional[List[str]],
     db: Session,
     queue: asyncio.Queue,
-    pipeline_type: str = "gemini"
+    # Giữ nguyên pipeline_type để có thể override thủ công
+    pipeline_type: Optional[str] = None
 ):
     """
     Hàm điều phối chính cho AI response, sử dụng Strategy Pattern.
-    TODO: Nên chuyển logic lưu DB ra ngoài router/service layer nếu muốn clean hơn.
+    Logic chọn pipeline ưu tiên như sau:
+    1. Giá trị `pipeline_type` được truyền trực tiếp (ví dụ: từ lệnh /rag).
+    2. Biến môi trường `USE_RAG=True`.
+    3. Mặc định là 'gemini'.
     """
     try:
-        # Bước 1: Lưu tin nhắn của người dùng
+        # Bước 1: Lưu tin nhắn của người dùng (giữ nguyên)
         crud.create_chat_message(
             db=db, chat_id=int(chat_id), role="user",
             content=user_message_content, file_ids=file_ids
         )
         logger.info(f"User message saved to DB for chat {chat_id}")
-        print(f"[DEBUG] User message: {user_message_content}")
 
-        # Bước 2: Lấy pipeline từ factory
+        # --- BƯỚC 2: LOGIC CHỌN PIPELINE ĐÃ ĐƯỢC TỐI ƯU HÓA ---
         from .strategy import get_pipeline
-        pipeline = get_pipeline(pipeline_type, config)
         
-        # Bước 3: Lấy response từ pipeline
+        # Mặc định, chúng ta sẽ dựa vào biến môi trường USE_RAG
+        final_pipeline_type = "rag" if USE_RAG else "gemini"
+        
+        # Tuy nhiên, nếu pipeline_type được truyền vào (không phải None), nó sẽ được ưu tiên
+        if pipeline_type:
+            final_pipeline_type = pipeline_type
+            
+        logger.info(f"Selected pipeline: '{final_pipeline_type}' (USE_RAG={USE_RAG}, override='{pipeline_type}')")
+        
+        # Lấy pipeline từ factory với các dependency cần thiết
+        pipeline = get_pipeline(
+            pipeline_type=final_pipeline_type,
+            config_service=get_settings() # Truyền config vào để factory sử dụng
+        )
+        # --- KẾT THÚC LOGIC CHỌN PIPELINE ---
+
+        # Bước 3: Lấy response từ pipeline (giữ nguyên)
         response = await pipeline.generate_response(
             chat_id=chat_id,
             user_message_content=user_message_content,
@@ -249,15 +270,14 @@ async def generate_ai_response_stream(
             queue=queue
         )
 
-        # Bước 4: Lưu response vào DB
+        # Bước 4: Lưu response vào DB (giữ nguyên)
         if response.content and not response.error:
             crud.create_chat_message(
                 db=db, chat_id=int(chat_id), role="model", content=response.content
             )
             logger.info(f"AI response saved for chat_id {chat_id}")
-            print(f"[DEBUG] AI response: {response.content}")
         elif response.error:
-            logger.error(f"Pipeline error: {response.error}")
+            logger.error(f"Pipeline error from '{final_pipeline_type}': {response.error}")
 
     except Exception as e:
         logger.error(f"Error in AI response stream for chat {chat_id}: {e}", exc_info=True)

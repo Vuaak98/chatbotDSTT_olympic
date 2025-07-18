@@ -40,6 +40,10 @@ class Settings(BaseSettings):
         "extra": "ignore"  # Allow extra fields in environment variables
     }
 
+    MATH_CHATBOT_SYSTEM_INSTRUCTION: str = (
+        "Bạn là một trợ lý toán học AI. Hãy trả lời các câu hỏi toán học một cách chi tiết, dễ hiểu và chính xác."
+    )
+
 @lru_cache()
 def get_settings():
     return Settings()
@@ -52,6 +56,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = parse_int_env("ACCESS_TOKEN_EXPIRE_MINUTES", 60)
 
-MATH_CHATBOT_SYSTEM_INSTRUCTION = (
-    "Bạn là một trợ lý toán học AI. Hãy trả lời các câu hỏi toán học một cách chi tiết, dễ hiểu và chính xác."
-)
+# === RAG PIPELINE SWITCH ===
+USE_RAG = os.getenv("USE_RAG", "false").lower() == "true"
+print(f"USE_RAG: {USE_RAG}")

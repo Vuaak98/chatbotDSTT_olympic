@@ -26,17 +26,17 @@
 ---
 
 ## 3. ÁP DỤNG STRATEGY PATTERN CHO PIPELINE
-- [ ] Tạo abstract class `PipelineStrategy` (dùng abc.ABC) trong `services.py` hoặc `strategy.py`.
-- [ ] Tạo các class con: `GeminiPipeline`, `RagPipeline` (và có thể thêm pipeline khác sau này).
-- [ ] Hàm điều phối chỉ cần khởi tạo đúng pipeline và gọi `generate_response`.
-- [ ] Test từng pipeline độc lập (Gemini/RAG), fix lỗi nếu có.
+- [x] Tạo abstract class `PipelineStrategy` (dùng abc.ABC) trong `services.py` hoặc `strategy.py`.
+- [x] Tạo các class con: `GeminiPipeline`, `RagPipeline` (và có thể thêm pipeline khác sau này).
+- [x] Hàm điều phối chỉ cần khởi tạo đúng pipeline và gọi `generate_response`.
+- [x] Test từng pipeline độc lập (Gemini/RAG), fix lỗi nếu có.
 
 ---
 
 ## 4. ĐIỀU PHỐI PIPELINE QUA BIẾN MÔI TRƯỜNG
-- [ ] Thêm biến `USE_RAG` vào `.env` và đọc trong `config.py`.
-- [ ] Đảm bảo có thể chuyển đổi pipeline chỉ bằng cách đổi biến môi trường và restart server.
-- [ ] Test chuyển đổi pipeline, đảm bảo không breaking change.
+- [x] Thêm biến `USE_RAG` vào `.env` và đọc trong `config.py`.
+- [x] Đảm bảo có thể chuyển đổi pipeline chỉ bằng cách đổi biến môi trường và restart server.
+- [x] Test chuyển đổi pipeline, đảm bảo không breaking change.
 
 ---
 

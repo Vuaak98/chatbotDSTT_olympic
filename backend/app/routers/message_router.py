@@ -61,7 +61,7 @@ async def create_new_message_for_chat(
         # Cắt '/rag' khỏi message_text khi gửi vào pipeline RAG
         message_for_pipeline = message_text.strip()[4:].lstrip()
     else:
-        pipeline_type = "gemini"
+        pipeline_type = None  # Không truyền pipeline_type, backend sẽ tự quyết định theo USE_RAG
         message_for_pipeline = message_text
 
     await services.generate_ai_response_stream(

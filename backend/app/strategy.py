@@ -244,7 +244,7 @@ class PipelineFactory:
             model_name = "gemini-1.5-flash"
             system_instruction = "You are a helpful AI assistant."
         else:
-            model_name = self.config_service.get_settings().gemini_model_name
+            model_name = self.config_service.gemini_model_name
             system_instruction = self.config_service.MATH_CHATBOT_SYSTEM_INSTRUCTION
         return GeminiPipeline(
             client=self.client,
